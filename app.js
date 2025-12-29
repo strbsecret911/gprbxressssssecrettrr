@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 const ADMIN_EMAIL = "dinijanuari23@gmail.com";
-const STORE_DOC_PATH = ["settings", "store"]; // { open: true/false, rate: 75 }
+const STORE_DOC_PATH = ["settings", "store"]; // { open, rate }
 const wantAdminPanel = new URLSearchParams(window.location.search).get("admin") === "1";
 
 const app = initializeApp(firebaseConfig);
@@ -126,7 +126,6 @@ function applyAdminUI(user){
   adminRateInput.disabled = !isAdmin;
   btnSaveRate.disabled = !isAdmin;
 
-  // set nilai rate terbaru di input admin
   adminRateInput.value = RATE;
 }
 
@@ -155,7 +154,7 @@ async function setStoreRate(newRate){
 }
 
 // =======================
-// Kalkulasi Gamepass
+// Kalkulasi
 // =======================
 function setRateUI(){
   const rateEl = document.getElementById("rate");
@@ -166,6 +165,7 @@ function clearCalc(){
   document.getElementById("robuxNeed").value = "";
   document.getElementById("harga").value = "";
   document.getElementById("netReceive").value = "";
+  document.getElementById("gigNetReceive").value = "";
 }
 
 function calcPaytax(){
@@ -175,8 +175,7 @@ function calcPaytax(){
     document.getElementById("harga").value = "";
     return;
   }
-  // persis kalkulator: ceil(target / 0.7)
-  const robuxNeed = Math.ceil(targetNet / SELLER_GET);
+  const robuxNeed = Math.ceil(targetNet / SELLER_GET); // sesuai kalkulator
   const hargaNum = robuxNeed * RATE;
 
   document.getElementById("robuxNeed").value = String(robuxNeed);
@@ -190,38 +189,70 @@ function calcNotax(){
     document.getElementById("harga").value = "";
     return;
   }
-  // persis kalkulator mode after: floor(input * 0.7)
-  const net = Math.floor(robux * SELLER_GET);
+  const net = Math.floor(robux * SELLER_GET); // sesuai kalkulator
   const hargaNum = robux * RATE;
 
   document.getElementById("netReceive").value = String(net) + " R$";
   document.getElementById("harga").value = formatRupiah(hargaNum);
 }
 
+function calcGig(){
+  const robux = Number(document.getElementById("gigRobux").value || 0);
+  if(!robux || robux <= 0){
+    document.getElementById("gigNetReceive").value = "";
+    document.getElementById("harga").value = "";
+    return;
+  }
+  const net = Math.floor(robux * SELLER_GET);
+  const hargaNum = robux * RATE;
+
+  document.getElementById("gigNetReceive").value = String(net) + " R$";
+  document.getElementById("harga").value = formatRupiah(hargaNum);
+}
+
 function applyTypeUI(){
-  const gpType = document.getElementById("gpType").value;
+  const type = document.getElementById("gpType").value;
+
   const paytax = document.getElementById("paytaxFields");
   const notax = document.getElementById("notaxFields");
+  const gig = document.getElementById("gigFields");
 
   const targetNet = document.getElementById("targetNet");
   const robuxInput = document.getElementById("robuxInput");
+  const gigMap = document.getElementById("gigMap");
+  const gigItem = document.getElementById("gigItem");
+  const gigRobux = document.getElementById("gigRobux");
 
   paytax.classList.add("hidden");
   notax.classList.add("hidden");
+  gig.classList.add("hidden");
 
+  // reset required
   targetNet.required = false;
   robuxInput.required = false;
+  gigMap.required = false;
+  gigItem.required = false;
+  gigRobux.required = false;
 
+  // clear
   targetNet.value = "";
   robuxInput.value = "";
+  gigMap.value = "";
+  gigItem.value = "";
+  gigRobux.value = "";
   clearCalc();
 
-  if(gpType === "paytax"){
+  if(type === "paytax"){
     paytax.classList.remove("hidden");
     targetNet.required = true;
-  } else if(gpType === "notax"){
+  } else if(type === "notax"){
     notax.classList.remove("hidden");
     robuxInput.required = true;
+  } else if(type === "gig"){
+    gig.classList.remove("hidden");
+    gigMap.required = true;
+    gigItem.required = true;
+    gigRobux.required = true;
   }
 }
 
@@ -409,10 +440,12 @@ function showPaymentPopup(qrUrl, hargaFormatted) {
 // =======================
 document.addEventListener('DOMContentLoaded', function(){
   const gpType = document.getElementById("gpType");
+
   const targetNet = document.getElementById("targetNet");
   const robuxInput = document.getElementById("robuxInput");
 
-  // default UI
+  const gigRobux = document.getElementById("gigRobux");
+
   applyTypeUI();
   setRateUI();
 
@@ -429,9 +462,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if (gpType.value === "notax") calcNotax();
   });
 
-  // =======================
-  // Firestore: listen open + rate
-  // =======================
+  gigRobux.addEventListener("input", () => {
+    if (gpType.value === "gig") calcGig();
+  });
+
+  // Firestore listen open + rate
   const storeRef = doc(db, STORE_DOC_PATH[0], STORE_DOC_PATH[1]);
   onSnapshot(storeRef, (snap) => {
     if (snap.exists()) {
@@ -447,9 +482,10 @@ document.addEventListener('DOMContentLoaded', function(){
     applyAdminUI(auth.currentUser || null);
     setRateUI();
 
-    // recalc kalau user sudah isi input
+    // recalc
     if (gpType.value === "paytax") calcPaytax();
     if (gpType.value === "notax") calcNotax();
+    if (gpType.value === "gig") calcGig();
   }, () => {
     storeOpen = true;
     RATE = 75;
@@ -457,9 +493,7 @@ document.addEventListener('DOMContentLoaded', function(){
     setRateUI();
   });
 
-  // =======================
   // Auth admin
-  // =======================
   onAuthStateChanged(auth, (user) => {
     isAdmin = !!(user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
     applyAdminUI(user);
@@ -487,9 +521,7 @@ document.addEventListener('DOMContentLoaded', function(){
     setStoreRate(v);
   });
 
-  // =======================
-  // Submit -> Telegram -> Payment
-  // =======================
+  // Submit
   document.getElementById("btnWa").addEventListener("click", function() {
     if (!storeOpen) {
       showPopup(
@@ -513,45 +545,50 @@ document.addEventListener('DOMContentLoaded', function(){
     const displayUser = document.getElementById("displayUser").value.trim();
     const type = gpType.value;
 
-    let robuxNeed = 0;
+    let hargaText = document.getElementById("harga").value;
+    let hargaNum = numOnly(hargaText);
+    if(!hargaNum){
+      showPopup('Notification', 'Oops', 'Harga belum terhitung. Cek input kamu.');
+      return;
+    }
+
     let detailLine = "";
 
     if(type === "paytax"){
       const target = Number(targetNet.value || 0);
-      robuxNeed = Math.ceil(target / SELLER_GET);
-      if(!target || robuxNeed <= 0){
-        showPopup('Notification', 'Oops', 'Isi target robux (bersih diterima) dengan benar.');
-        targetNet.focus();
-        return;
-      }
+      const robuxNeed = Math.ceil(target / SELLER_GET);
       detailLine =
         "Tipe: Gamepass Paytax\n" +
         "Target bersih: " + target + " R$\n" +
         "Robux dibutuhkan: " + robuxNeed + " R$\n";
+
     } else if(type === "notax"){
       const r = Number(robuxInput.value || 0);
-      robuxNeed = r;
-      if(!r || robuxNeed <= 0){
-        showPopup('Notification', 'Oops', 'Isi jumlah robux dengan benar.');
-        robuxInput.focus();
-        return;
-      }
       const net = Math.floor(r * SELLER_GET);
       detailLine =
         "Tipe: Gamepass No tax\n" +
-        "Robux: " + robuxNeed + " R$\n" +
+        "Robux: " + r + " R$\n" +
+        "Perkiraan bersih diterima: " + net + " R$\n";
+
+    } else if(type === "gig"){
+      const map = document.getElementById("gigMap").value.trim();
+      const item = document.getElementById("gigItem").value.trim();
+      const r = Number(document.getElementById("gigRobux").value || 0);
+      const net = Math.floor(r * SELLER_GET);
+
+      if(!map || !item || !r){
+        showPopup('Notification', 'Oops', 'Lengkapi data GIG (Maps, Item, Harga Robux).');
+        return;
+      }
+
+      detailLine =
+        "Tipe: GIG\n" +
+        "Maps: " + map + "\n" +
+        "Item Gift: " + item + "\n" +
+        "Harga item (Robux): " + r + " R$\n" +
         "Perkiraan bersih diterima: " + net + " R$\n";
     } else {
-      showPopup('Notification', 'Oops', 'Pilih jenis gamepass dulu.');
-      gpType.focus();
-      return;
-    }
-
-    // pastikan harga sudah ada
-    const hargaText = document.getElementById("harga").value;
-    const hargaNum = numOnly(hargaText);
-    if(!hargaNum){
-      showPopup('Notification', 'Oops', 'Harga belum terhitung. Cek input kamu.');
+      showPopup('Notification', 'Oops', 'Pilih jenis dulu.');
       return;
     }
 
@@ -560,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const chatId = "-1003049680083";
 
     const text =
-      "Pesanan Baru Masuk! (GAMEPASS)\n\n" +
+      "Pesanan Baru Masuk!\n\n" +
       "Display + Username: " + displayUser + "\n" +
       detailLine +
       "Rate: Rp" + RATE + " / Robux\n" +
