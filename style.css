@@ -1,3 +1,4 @@
+/* (SAMA PERSIS DENGAN YANG KEMARIN, plus admin rate) */
 body {
   font-family: 'Roboto', sans-serif;
   background: #fff;
@@ -7,7 +8,6 @@ body {
   font-size: 12px;
 }
 
-/* Form */
 .form-container {
   max-width: 400px;
   margin: 20px auto 40px;
