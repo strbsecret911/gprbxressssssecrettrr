@@ -4,15 +4,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/fireba
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-// Firebase config
+// =======================
+// FIREBASE CONFIG (PROJECT BARU: gp-order)
+// =======================
 const firebaseConfig = {
-  apiKey: "AIzaSyDpNvuwxq9bgAV700hRxAkcs7BgrzHd72A",
-  authDomain: "autoorderobux.firebaseapp.com",
-  projectId: "autoorderobux",
-  storageBucket: "autoorderobux.firebasestorage.app",
-  messagingSenderId: "505258620852",
-  appId: "1:505258620852:web:9daf566902c7efe73324e1",
-  measurementId: "G-QMZ8R007VB"
+  apiKey: "AIzaSyArSdap1Bl2MKU6MoBn7kcWK0IQx1J3PTg",
+  authDomain: "gp-order.firebaseapp.com",
+  projectId: "gp-order",
+  storageBucket: "gp-order.firebasestorage.app",
+  messagingSenderId: "933313943838",
+  appId: "1:933313943838:web:bd1abe7762dee7eba6110f",
+  measurementId: "G-Z6BRWFH53P"
 };
 
 const ADMIN_EMAIL = "dinijanuari23@gmail.com";
@@ -31,7 +33,9 @@ let RATE = 75;
 // tax sesuai kalkulator
 const SELLER_GET = 0.7; // 70%
 
-// ===== helpers
+// =======================
+// HELPERS
+// =======================
 function formatRupiah(num){
   const n = Number(num || 0);
   return "Rp" + new Intl.NumberFormat('id-ID').format(isNaN(n) ? 0 : n);
@@ -41,7 +45,9 @@ function numOnly(v){
   return isNaN(n) ? 0 : n;
 }
 
-// ===== popup
+// =======================
+// POPUP (OK only)
+// =======================
 function showPopup(title, message, submessage){
   const existing = document.getElementById('validationCenterPopup');
   if(existing) existing.remove();
@@ -74,7 +80,9 @@ function showPopup(title, message, submessage){
   popup.focus({preventScroll:true});
 }
 
-// ===== admin UI
+// =======================
+// ADMIN UI
+// =======================
 function applyStoreStatusUI(){
   const badge = document.getElementById('adminBadge');
   if(badge){
@@ -127,6 +135,7 @@ async function setStoreOpen(flag){
   const ref = doc(db, STORE_DOC_PATH[0], STORE_DOC_PATH[1]);
   await setDoc(ref, { open: !!flag, updatedAt: serverTimestamp() }, { merge: true });
 }
+
 async function setStoreRate(newRate){
   if(!isAdmin){
     showPopup('Notification', 'Akses ditolak', 'Hanya admin yang bisa mengubah rate.');
@@ -142,55 +151,76 @@ async function setStoreRate(newRate){
   showPopup('Notification', 'Berhasil', 'Rate berhasil disimpan.');
 }
 
-// ===== kalkulasi
+// =======================
+// KALKULASI
+// =======================
 function setRateUI(){
   const rateEl = document.getElementById("rate");
   if(rateEl) rateEl.value = formatRupiah(RATE) + " / Robux";
 }
 function clearCalc(){
-  document.getElementById("robuxNeed").value = "";
-  document.getElementById("harga").value = "";
-  document.getElementById("netReceive").value = "";
+  const a = document.getElementById("robuxNeed");
+  const b = document.getElementById("harga");
+  const c = document.getElementById("netReceive");
+  if(a) a.value = "";
+  if(b) b.value = "";
+  if(c) c.value = "";
 }
+
 function calcPaytax(){
-  const targetNet = Number(document.getElementById("targetNet").value || 0);
+  const targetNet = Number(document.getElementById("targetNet")?.value || 0);
+  const robuxNeedEl = document.getElementById("robuxNeed");
+  const hargaEl = document.getElementById("harga");
+
   if(!targetNet || targetNet <= 0){
-    document.getElementById("robuxNeed").value = "";
-    document.getElementById("harga").value = "";
+    if(robuxNeedEl) robuxNeedEl.value = "";
+    if(hargaEl) hargaEl.value = "";
     return;
   }
   const robuxNeed = Math.ceil(targetNet / SELLER_GET);
   const hargaNum = robuxNeed * RATE;
 
-  document.getElementById("robuxNeed").value = String(robuxNeed);
-  document.getElementById("harga").value = formatRupiah(hargaNum);
+  if(robuxNeedEl) robuxNeedEl.value = String(robuxNeed);
+  if(hargaEl) hargaEl.value = formatRupiah(hargaNum);
 }
+
 function calcNotax(){
-  const robux = Number(document.getElementById("robuxInput").value || 0);
+  const robux = Number(document.getElementById("robuxInput")?.value || 0);
+  const netReceiveEl = document.getElementById("netReceive");
+  const hargaEl = document.getElementById("harga");
+
   if(!robux || robux <= 0){
-    document.getElementById("netReceive").value = "";
-    document.getElementById("harga").value = "";
+    if(netReceiveEl) netReceiveEl.value = "";
+    if(hargaEl) hargaEl.value = "";
     return;
   }
   const net = Math.floor(robux * SELLER_GET);
   const hargaNum = robux * RATE;
 
-  document.getElementById("netReceive").value = String(net) + " R$";
-  document.getElementById("harga").value = formatRupiah(hargaNum);
+  if(netReceiveEl) netReceiveEl.value = String(net) + " R$";
+  if(hargaEl) hargaEl.value = formatRupiah(hargaNum);
 }
+
 function calcGig(){
-  const gigRobux = Number(document.getElementById("gigRobuxPrice").value || 0);
+  const gigRobux = Number(document.getElementById("gigRobuxPrice")?.value || 0);
+  const hargaEl = document.getElementById("harga");
+
   if(!gigRobux || gigRobux <= 0){
-    document.getElementById("harga").value = "";
+    if(hargaEl) hargaEl.value = "";
     return;
   }
   const hargaNum = gigRobux * RATE;
-  document.getElementById("harga").value = formatRupiah(hargaNum);
+  if(hargaEl) hargaEl.value = formatRupiah(hargaNum);
 }
 
-// ===== type UI
+// =======================
+// TYPE UI
+// =======================
 function applyTypeUI(){
-  const gpType = document.getElementById("gpType").value;
+  const gpTypeEl = document.getElementById("gpType");
+  if(!gpTypeEl) return;
+
+  const gpType = gpTypeEl.value;
 
   const paytax = document.getElementById("paytaxFields");
   const notax = document.getElementById("notaxFields");
@@ -202,40 +232,42 @@ function applyTypeUI(){
   const gigItem = document.getElementById("gigItem");
   const gigRobuxPrice = document.getElementById("gigRobuxPrice");
 
-  paytax.classList.add("hidden");
-  notax.classList.add("hidden");
-  gig.classList.add("hidden");
+  paytax?.classList.add("hidden");
+  notax?.classList.add("hidden");
+  gig?.classList.add("hidden");
 
   // reset required
-  targetNet.required = false;
-  robuxInput.required = false;
-  gigMap.required = false;
-  gigItem.required = false;
-  gigRobuxPrice.required = false;
+  if(targetNet) targetNet.required = false;
+  if(robuxInput) robuxInput.required = false;
+  if(gigMap) gigMap.required = false;
+  if(gigItem) gigItem.required = false;
+  if(gigRobuxPrice) gigRobuxPrice.required = false;
 
   // reset values
-  targetNet.value = "";
-  robuxInput.value = "";
-  gigMap.value = "";
-  gigItem.value = "";
-  gigRobuxPrice.value = "";
+  if(targetNet) targetNet.value = "";
+  if(robuxInput) robuxInput.value = "";
+  if(gigMap) gigMap.value = "";
+  if(gigItem) gigItem.value = "";
+  if(gigRobuxPrice) gigRobuxPrice.value = "";
   clearCalc();
 
   if(gpType === "paytax"){
-    paytax.classList.remove("hidden");
-    targetNet.required = true;
+    paytax?.classList.remove("hidden");
+    if(targetNet) targetNet.required = true;
   } else if(gpType === "notax"){
-    notax.classList.remove("hidden");
-    robuxInput.required = true;
+    notax?.classList.remove("hidden");
+    if(robuxInput) robuxInput.required = true;
   } else if(gpType === "gig"){
-    gig.classList.remove("hidden");
-    gigMap.required = true;
-    gigItem.required = true;
-    gigRobuxPrice.required = true;
+    gig?.classList.remove("hidden");
+    if(gigMap) gigMap.required = true;
+    if(gigItem) gigItem.required = true;
+    if(gigRobuxPrice) gigRobuxPrice.required = true;
   }
 }
 
-// ===== payment modal (dipakai sama persis)
+// =======================
+// PAYMENT MODAL (SAMA)
+// =======================
 function showPaymentPopup(qrUrl, hargaFormatted) {
   const backdrop = document.getElementById('paymentModalBackdrop');
   const modalQr = document.getElementById('modalQr');
@@ -304,6 +336,7 @@ function showPaymentPopup(qrUrl, hargaFormatted) {
   };
 
   function showMessage(msg) {
+    if(!copySuccess) return;
     copySuccess.textContent = msg;
     copySuccess.style.display = 'block';
     setTimeout(()=> copySuccess.style.display = 'none', 2500);
@@ -332,59 +365,65 @@ function showPaymentPopup(qrUrl, hargaFormatted) {
     methodButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.method === methodKey));
     const cfg = METHOD_CONFIG[methodKey];
 
-    walletLabel.textContent = cfg.label;
-    walletNote.textContent = cfg.note;
+    if(walletLabel) walletLabel.textContent = cfg.label;
+    if(walletNote) walletNote.textContent = cfg.note;
 
     const total = cfg.calcTotal(baseAmount);
-    modalAmount.textContent = formatRupiahLocal(total);
+    if(modalAmount) modalAmount.textContent = formatRupiahLocal(total);
 
     if (cfg.showNumber) {
-      walletNumberTitle.textContent = cfg.numberTitle;
-      walletNumber.textContent = cfg.number;
-      walletNumberWrapper.style.display = 'block';
-      copyNumberBtn.style.display = 'block';
+      if(walletNumberTitle) walletNumberTitle.textContent = cfg.numberTitle;
+      if(walletNumber) walletNumber.textContent = cfg.number;
+      if(walletNumberWrapper) walletNumberWrapper.style.display = 'block';
+      if(copyNumberBtn) copyNumberBtn.style.display = 'block';
     } else {
-      walletNumberWrapper.style.display = 'none';
-      copyNumberBtn.style.display = 'none';
+      if(walletNumberWrapper) walletNumberWrapper.style.display = 'none';
+      if(copyNumberBtn) copyNumberBtn.style.display = 'none';
     }
 
     if (methodKey === 'qris') {
-      modalQr.style.display = 'block';
-      modalQr.src = qrUrl;
+      if(modalQr){
+        modalQr.style.display = 'block';
+        modalQr.src = qrUrl;
+      }
     } else {
-      modalQr.style.display = 'none';
+      if(modalQr) modalQr.style.display = 'none';
     }
   }
 
   applyMethod('qris');
 
-  copySuccess.style.display = 'none';
-  backdrop.style.display = 'flex';
-  backdrop.setAttribute('aria-hidden', 'false');
+  if(backdrop){
+    if(copySuccess) copySuccess.style.display = 'none';
+    backdrop.style.display = 'flex';
+    backdrop.setAttribute('aria-hidden', 'false');
+  }
 
   methodButtons.forEach(btn => { btn.onclick = function () { applyMethod(this.dataset.method); }; });
 
-  document.getElementById('closeModalBtn').onclick = function() {
-    backdrop.style.display = 'none';
-    backdrop.setAttribute('aria-hidden', 'true');
-  };
-
-  backdrop.onclick = function(e) {
-    if (e.target === backdrop) {
+  document.getElementById('closeModalBtn')?.addEventListener('click', () => {
+    if(backdrop){
       backdrop.style.display = 'none';
       backdrop.setAttribute('aria-hidden', 'true');
     }
-  };
+  });
 
-  copyNumberBtn.onclick = function () {
-    copyTextToClipboard(walletNumber.textContent || '', 'Nomor berhasil disalin');
-  };
+  backdrop?.addEventListener('click', (e) => {
+    if(e.target === backdrop){
+      backdrop.style.display = 'none';
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+  });
 
-  document.getElementById('copyAmountBtn').onclick = function() {
-    copyTextToClipboard(modalAmount.textContent || '', 'Jumlah berhasil disalin');
-  };
+  copyNumberBtn?.addEventListener('click', () => {
+    copyTextToClipboard(walletNumber?.textContent || '', 'Nomor berhasil disalin');
+  });
 
-  document.getElementById('openBotBtn').onclick = function() {
+  document.getElementById('copyAmountBtn')?.addEventListener('click', () => {
+    copyTextToClipboard(modalAmount?.textContent || '', 'Jumlah berhasil disalin');
+  });
+
+  document.getElementById('openBotBtn')?.addEventListener('click', () => {
     const botUsername = 'topupressbot';
     const tgScheme = 'tg://resolve?domain=' + encodeURIComponent(botUsername);
     const webLink  = 'https://t.me/' + encodeURIComponent(botUsername) + '?start';
@@ -409,10 +448,12 @@ function showPaymentPopup(qrUrl, hargaFormatted) {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', cleanup);
     });
-  };
+  });
 }
 
-// ===== DOM ready
+// =======================
+// DOM READY
+// =======================
 document.addEventListener('DOMContentLoaded', function(){
   const gpType = document.getElementById("gpType");
   const targetNet = document.getElementById("targetNet");
@@ -422,21 +463,21 @@ document.addEventListener('DOMContentLoaded', function(){
   applyTypeUI();
   setRateUI();
 
-  gpType.addEventListener("change", () => {
+  gpType?.addEventListener("change", () => {
     applyTypeUI();
     setRateUI();
   });
 
-  targetNet.addEventListener("input", () => {
-    if (gpType.value === "paytax") calcPaytax();
+  targetNet?.addEventListener("input", () => {
+    if (gpType?.value === "paytax") calcPaytax();
   });
 
-  robuxInput.addEventListener("input", () => {
-    if (gpType.value === "notax") calcNotax();
+  robuxInput?.addEventListener("input", () => {
+    if (gpType?.value === "notax") calcNotax();
   });
 
-  gigRobuxPrice.addEventListener("input", () => {
-    if (gpType.value === "gig") calcGig();
+  gigRobuxPrice?.addEventListener("input", () => {
+    if (gpType?.value === "gig") calcGig();
   });
 
   // listen store status + rate
@@ -455,10 +496,9 @@ document.addEventListener('DOMContentLoaded', function(){
     applyAdminUI(auth.currentUser || null);
     setRateUI();
 
-    // recalc when rate changes
-    if (gpType.value === "paytax") calcPaytax();
-    if (gpType.value === "notax") calcNotax();
-    if (gpType.value === "gig") calcGig();
+    if (gpType?.value === "paytax") calcPaytax();
+    if (gpType?.value === "notax") calcNotax();
+    if (gpType?.value === "gig") calcGig();
   }, () => {
     storeOpen = true;
     RATE = 75;
@@ -473,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if (user && !isAdmin) {
       signOut(auth).catch(()=>{});
-      showPopup('Notification', 'Akses ditolak', 'Email ini bukan admin.');
+      showPopup('Notification', 'Akses ditolak', 'Anda bukan admin.');
     }
   });
 
@@ -495,18 +535,18 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   // submit
-  document.getElementById("btnWa").addEventListener("click", function() {
+  document.getElementById("btnWa")?.addEventListener("click", function() {
     if (!storeOpen) {
       showPopup(
         'Notification',
         'CLOSE',
-        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali saat @Topupgram OPEN.'
+        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali lagi namti.'
       );
       return;
     }
 
     const form = document.getElementById("orderForm");
-    const inputs = form.querySelectorAll("input[required], select[required]");
+    const inputs = form?.querySelectorAll("input[required], select[required]") || [];
     for (const input of inputs) {
       if (!String(input.value || '').trim()) {
         showPopup('Notification', 'Oops', 'Harap isi semua kolom yang wajib diisi!');
@@ -515,12 +555,12 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
-    const displayUser = document.getElementById("displayUser").value.trim();
-    const type = gpType.value;
+    const displayUser = document.getElementById("displayUser")?.value?.trim() || '';
+    const type = gpType?.value || '';
 
     let detailLine = "";
-    let hargaText = document.getElementById("harga").value;
-    let hargaNum = numOnly(hargaText);
+    const hargaText = document.getElementById("harga")?.value || '';
+    const hargaNum = numOnly(hargaText);
 
     if(!hargaNum){
       showPopup('Notification', 'Oops', 'Harga belum terhitung. Cek input kamu.');
@@ -528,23 +568,23 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     if(type === "paytax"){
-      const target = Number(targetNet.value || 0);
+      const target = Number(targetNet?.value || 0);
       const need = Math.ceil(target / SELLER_GET);
       detailLine =
         "Tipe: Gamepass Paytax\n" +
         "Target bersih: " + target + " R$\n" +
         "Robux dibutuhkan: " + need + " R$\n";
     } else if(type === "notax"){
-      const r = Number(robuxInput.value || 0);
+      const r = Number(robuxInput?.value || 0);
       const net = Math.floor(r * SELLER_GET);
       detailLine =
         "Tipe: Gamepass No tax\n" +
         "Robux: " + r + " R$\n" +
         "Perkiraan bersih diterima: " + net + " R$\n";
     } else if(type === "gig"){
-      const map = document.getElementById("gigMap").value.trim();
-      const item = document.getElementById("gigItem").value.trim();
-      const robuxItem = Number(document.getElementById("gigRobuxPrice").value || 0);
+      const map = document.getElementById("gigMap")?.value?.trim() || '';
+      const item = document.getElementById("gigItem")?.value?.trim() || '';
+      const robuxItem = Number(document.getElementById("gigRobuxPrice")?.value || 0);
 
       detailLine =
         "Tipe: GIG\n" +
@@ -553,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function(){
         "Harga item: " + robuxItem + " R$\n";
     } else {
       showPopup('Notification', 'Oops', 'Pilih jenis dulu.');
-      gpType.focus();
+      gpType?.focus();
       return;
     }
 
@@ -577,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (res.ok) {
         const qrUrl = "https://payment.uwu.ai/assets/images/gallery03/8555ed8a_original.jpg?v=58e63277";
         showPaymentPopup(qrUrl, hargaText);
-        form.reset();
+        form?.reset();
         applyTypeUI();
         setRateUI();
       } else {
