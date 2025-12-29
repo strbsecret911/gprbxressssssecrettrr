@@ -3,177 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Robux Gamepass - GIG</title>
+  <title>Gamepass Order - Topupgram</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
 
-<div class="form-container">
-  <h2>Form Robux Gamepass - GIG</h2>
-
-  <form id="orderForm">
-    <div class="form-group">
-      <label for="displayUser">Display Name + Username Roblox *</label>
-      <input type="text" id="displayUser" name="displayUser" placeholder="Contoh: Alyzè + @deeyney" required>
-      <div class="notes">Tulis sesuai format: Display Name + @username</div>
-    </div>
-
-    <div class="form-group">
-      <label for="gpType">Pilihan Robux Gamepass *</label>
-      <select id="gpType" name="gpType" required>
-        <option value="">-- Pilih --</option>
-        <option value="paytax">Gamepass Paytax</option>
-        <option value="notax">Gamepass No tax</option>
-        <option value="gig">GIG</option>
-      </select>
-    </div>
-
-    <!-- PAYTAX -->
-    <div id="paytaxFields" class="hidden">
-      <div class="form-group">
-        <label for="targetNet">Nominal target robux (bersih diterima) *</label>
-        <input type="number" id="targetNet" name="targetNet" placeholder="Contoh: 100" min="1">
+  <!-- ADMIN PANEL (muncul hanya kalau buka ?admin=1) -->
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <div class="admin-head">
+      <div class="admin-left">
+        <div class="admin-title">Admin Panel</div>
+        <div class="admin-sub">Login hanya untuk <b>dinijanuari23@gmail.com</b></div>
       </div>
-
-      <div class="form-group">
-        <label for="robuxNeed">Jumlah robux yang dibutuhkan *</label>
-        <input type="text" id="robuxNeed" name="robuxNeed" readonly>
-        <div class="notes">Set gamepass kamu sesuai jumlah robux yang dibutuhkan.</div>
+      <div class="admin-right">
+        <span id="adminBadge" class="badge">OPEN</span>
       </div>
     </div>
 
-    <!-- NOTAX -->
-    <div id="notaxFields" class="hidden">
-      <div class="form-group">
-        <label for="robuxInput">Masukkan jumlah robux *</label>
-        <input type="number" id="robuxInput" name="robuxInput" placeholder="Contoh: 500" min="1">
+    <div class="admin-row">
+      <button id="btnAdminLogin" type="button" class="btn-secondary">Login Google</button>
+      <button id="btnAdminLogout" type="button" class="btn-secondary" style="display:none;">Logout</button>
+      <span id="adminEmail" class="admin-email"></span>
+    </div>
+
+    <div class="admin-actions">
+      <button id="btnSetOpen" type="button">Set OPEN</button>
+      <button id="btnSetClose" type="button" class="danger">Set CLOSED</button>
+    </div>
+
+    <div class="admin-rate">
+      <label>Rate (Rp / Robux)</label>
+      <div class="rate-row">
+        <input id="adminRateInput" type="number" min="1" step="1" placeholder="Contoh: 75" />
+        <button id="btnSaveRate" type="button">Simpan Rate</button>
       </div>
-
-      <div class="form-group">
-        <label for="netReceive">Perkiraan robux bersih diterima</label>
-        <input type="text" id="netReceive" name="netReceive" readonly>
-        <div class="notes">Auto: floor(robux * 0.7)</div>
-      </div>
+      <div class="admin-note">Rate tersimpan di Firestore: <code>settings/store.rate</code></div>
     </div>
-
-    <!-- GIG -->
-    <div id="gigFields" class="hidden">
-      <div class="form-group">
-        <label for="gigMap">Maps apa *</label>
-        <input type="text" id="gigMap" name="gigMap" placeholder="Contoh: fish it">
-      </div>
-
-      <div class="form-group">
-        <label for="gigItem">Item yang mau di gift *</label>
-        <input type="text" id="gigItem" name="gigItem" placeholder="Contoh: create skin elderwood">
-      </div>
-
-      <div class="form-group">
-        <label for="gigRobuxPrice">Harga item (Jumlah robux) *</label>
-        <input type="number" id="gigRobuxPrice" name="gigRobuxPrice" placeholder="Contoh: 99" min="1">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="rate">Rate (Rp/Robux)</label>
-      <input type="text" id="rate" name="rate" readonly>
-    </div>
-
-    <div class="form-group">
-      <label for="harga">Harga *</label>
-      <input type="text" id="harga" name="harga" readonly required>
-    </div>
-
-    <div style="text-align:center; margin: 14px 0 6px;">
-      <button type="button" id="btnWa">Pesan via Telegram</button>
-    </div>
-  </form>
-</div>
-
-<!-- Payment Modal -->
-<div id="paymentModalBackdrop" class="modal-backdrop" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <h3 id="modalTitle">Pembayaran</h3>
-
-    <img id="modalQr" class="qr" src="" alt="QR Pembayaran">
-    <div id="modalAmount" class="amount">Rp0</div>
-
-    <div class="method-switch">
-      <button type="button" class="method-btn active" data-method="qris">QRIS</button>
-      <button type="button" class="method-btn" data-method="gopay">GoPay</button>
-      <button type="button" class="method-btn" data-method="seabank">SeaBank</button>
-      <button type="button" class="method-btn" data-method="bri">BRI</button>
-    </div>
-
-    <div class="wallet-section">
-      <div id="walletLabel" class="wallet-label">QRIS All Payment (scan QR di atas)</div>
-
-      <div id="walletNumberWrapper">
-        <div id="walletNumberTitle" class="wallet-number-title">No tujuan pembayaran</div>
-        <div id="walletNumber" class="wallet-number">Gunakan QR di atas</div>
-        <button id="copyNumberBtn" type="button" class="copy-mini-btn">Salin nomor</button>
-      </div>
-
-      <div id="walletNote" class="wallet-note">
-        QRIS hingga Rp499.000 tidak ada biaya tambahan. Di atas itu akan dikenakan biaya 0,3% dari nominal.
-      </div>
-    </div>
-
-    <div class="pay-note">
-      Data pesanan berhasil dikirim! Silahkan lakukan pembayaran, lalu screenshot bukti pembayaran.
-    </div>
-
-    <div class="actions">
-      <button id="copyAmountBtn" type="button">Salin Jumlah</button>
-      <button id="openBotBtn" type="button">Buka Bot</button>
-    </div>
-
-    <div class="small-note">
-      Setelah bayar dan screenshot, klik Buka Bot untuk konfirmasi pembayaran agar pesanan segera diproses.
-    </div>
-
-    <div style="margin-top:10px;">
-      <button id="closeModalBtn" type="button" style="width:100%; background:#e0e0e0; color:#222;">Tutup</button>
-    </div>
-
-    <div id="copySuccess" class="copy-success"></div>
-  </div>
-</div>
-
-<!-- ADMIN PANEL (muncul kalau ?admin=1) -->
-<div id="adminPanel" class="admin-panel" style="display:none;">
-  <div class="admin-title">
-    <span>Admin Panel</span>
-    <span id="adminBadge" class="admin-badge">—</span>
   </div>
 
-  <div class="admin-auth">
-    <button type="button" id="btnAdminLogin" class="admin-login">Login Admin</button>
-    <button type="button" id="btnAdminLogout" class="admin-logout" style="display:none;">Logout</button>
-    <div id="adminEmail" class="admin-email"></div>
+  <!-- FORM -->
+  <div class="form-container">
+    <h2>Form Gamepass Order</h2>
+
+    <form id="orderForm">
+      <div class="form-group">
+        <label for="displayUser">Display Name + Username *</label>
+        <input type="text" id="displayUser" name="displayUser" placeholder="Contoh: Alyzè + @deeyney" required>
+      </div>
+
+      <div class="form-group">
+        <label for="gpType">Pilihan Robux Gamepass *</label>
+        <select id="gpType" name="gpType" required>
+          <option value="paytax">Gamepass Paytax</option>
+          <option value="notax">Gamepass No tax</option>
+          <option value="gig">GIG</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="rate">Rate</label>
+        <input type="text" id="rate" readonly>
+      </div>
+
+      <!-- PAYTAX -->
+      <div id="paytaxFields" class="section">
+        <div class="form-group">
+          <label for="targetNet">Nominal target robux (bersih diterima) *</label>
+          <input type="number" id="targetNet" placeholder="Contoh: 100" min="1">
+        </div>
+
+        <div class="form-group">
+          <label for="robuxNeed">Jumlah robux yang dibutuhkan (auto) *</label>
+          <input type="text" id="robuxNeed" readonly>
+        </div>
+
+        <!-- NEW: LINK GAMEPASS -->
+        <div class="form-group">
+          <label for="gpLinkPaytax">Masukkan link gamepass *</label>
+          <input type="url" id="gpLinkPaytax" placeholder="cth. https://www.roblox.com/game-pass/xxxxx" inputmode="url">
+          <div class="notes">Wajib untuk Paytax / No tax.</div>
+        </div>
+      </div>
+
+      <!-- NOTAX -->
+      <div id="notaxFields" class="section hidden">
+        <div class="form-group">
+          <label for="robuxInput">Masukkan jumlah robux *</label>
+          <input type="number" id="robuxInput" placeholder="Contoh: 500" min="1">
+        </div>
+
+        <div class="form-group">
+          <label for="netReceive">Perkiraan bersih diterima (auto)</label>
+          <input type="text" id="netReceive" readonly>
+        </div>
+
+        <!-- NEW: LINK GAMEPASS -->
+        <div class="form-group">
+          <label for="gpLinkNotax">Masukkan link gamepass *</label>
+          <input type="url" id="gpLinkNotax" placeholder="cth. https://www.roblox.com/game-pass/xxxxx" inputmode="url">
+          <div class="notes">Wajib untuk Paytax / No tax.</div>
+        </div>
+      </div>
+
+      <!-- GIG -->
+      <div id="gigFields" class="section hidden">
+        <div class="form-group">
+          <label for="gigMap">Maps apa *</label>
+          <input type="text" id="gigMap" placeholder="Contoh: fish it">
+        </div>
+
+        <div class="form-group">
+          <label for="gigItem">Item yang mau di gift *</label>
+          <input type="text" id="gigItem" placeholder="Contoh: create skin elderwood">
+        </div>
+
+        <div class="form-group">
+          <label for="gigRobuxPrice">Harga item (Jumlah robux) *</label>
+          <input type="number" id="gigRobuxPrice" placeholder="Contoh: 99" min="1">
+        </div>
+
+        <div class="notes">Catatan: GIG tidak pakai perkiraan robux bersih diterima.</div>
+      </div>
+
+      <!-- HARGA -->
+      <div class="form-group">
+        <label for="harga">Harga (auto) *</label>
+        <input type="text" id="harga" readonly required>
+      </div>
+
+      <div style="text-align:center; margin: 14px 0 6px;">
+        <button type="button" id="btnWa">Pesan via Telegram</button>
+      </div>
+    </form>
   </div>
 
-  <div class="admin-actions">
-    <button type="button" id="btnSetOpen" class="admin-open">OPEN</button>
-    <button type="button" id="btnSetClose" class="admin-close">CLOSE</button>
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Pembayaran</h3>
+
+      <img id="modalQr" class="qr" src="" alt="QR Pembayaran">
+      <div id="modalAmount" class="amount">Rp0</div>
+
+      <div class="method-switch">
+        <button type="button" class="method-btn active" data-method="qris">QRIS</button>
+        <button type="button" class="method-btn" data-method="gopay">GoPay</button>
+        <button type="button" class="method-btn" data-method="seabank">SeaBank</button>
+        <button type="button" class="method-btn" data-method="bri">BRI</button>
+      </div>
+
+      <div class="wallet-section">
+        <div id="walletLabel" class="wallet-label">QRIS (scan QR di atas)</div>
+
+        <div id="walletNumberWrapper">
+          <div id="walletNumberTitle" class="wallet-number-title">No tujuan pembayaran</div>
+          <div id="walletNumber" class="wallet-number">Gunakan QR di atas</div>
+          <button id="copyNumberBtn" type="button" class="copy-mini-btn">Salin nomor</button>
+        </div>
+
+        <div id="walletNote" class="wallet-note">
+          QRIS hingga Rp499.000 tidak ada biaya tambahan. Di atas itu akan dikenakan biaya 0,3% dari nominal.
+        </div>
+      </div>
+
+      <div class="pay-note">
+        Data pesanan berhasil dikirim! Silahkan lakukan pembayaran, lalu screenshot bukti pembayaran.
+      </div>
+
+      <div class="actions">
+        <button id="copyAmountBtn" type="button">Salin Jumlah</button>
+        <button id="openBotBtn" type="button">Buka Bot</button>
+      </div>
+
+      <div class="small-note">
+        Setelah bayar dan screenshot, klik Buka Bot untuk konfirmasi pembayaran agar pesanan segera diproses.
+      </div>
+
+      <div style="margin-top:10px;">
+        <button id="closeModalBtn" type="button" class="btn-close">Tutup</button>
+      </div>
+
+      <div id="copySuccess" class="copy-success"></div>
+    </div>
   </div>
 
-  <div class="admin-rate">
-    <label for="adminRateInput">Ubah Rate (Rp/Robux)</label>
-    <input id="adminRateInput" type="number" min="1" step="1" placeholder="Contoh: 75">
-    <button type="button" id="btnSaveRate" class="admin-save">Simpan Rate</button>
-    <div class="admin-mini">Rate tersimpan di Firestore: <b>settings/store.rate</b></div>
-  </div>
+  <!-- popup container -->
+  <div id="validationContainer"></div>
 
-  <div class="admin-mini" style="margin-top:10px;">
-    Admin hanya untuk <b>dinijanuari23@gmail.com</b><br>
-    Panel muncul jika URL ada <b>?admin=1</b>
-  </div>
-</div>
-
-<div id="validationContainer"></div>
-
-<script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
