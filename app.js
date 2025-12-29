@@ -5,7 +5,7 @@ import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 // =======================
-// FIREBASE CONFIG (PROJECT BARU: gp-order)
+// FIREBASE CONFIG (gp-order)
 // =======================
 const firebaseConfig = {
   apiKey: "AIzaSyArSdap1Bl2MKU6MoBn7kcWK0IQx1J3PTg",
@@ -43,6 +43,14 @@ function formatRupiah(num){
 function numOnly(v){
   const n = Number(String(v ?? "").replace(/[^\d]/g, ""));
   return isNaN(n) ? 0 : n;
+}
+function isValidUrl(url){
+  try{
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch(e){
+    return false;
+  }
 }
 
 // =======================
@@ -159,12 +167,12 @@ function setRateUI(){
   if(rateEl) rateEl.value = formatRupiah(RATE) + " / Robux";
 }
 function clearCalc(){
-  const a = document.getElementById("robuxNeed");
-  const b = document.getElementById("harga");
-  const c = document.getElementById("netReceive");
-  if(a) a.value = "";
-  if(b) b.value = "";
-  if(c) c.value = "";
+  const robuxNeed = document.getElementById("robuxNeed");
+  const harga = document.getElementById("harga");
+  const netReceive = document.getElementById("netReceive");
+  if(robuxNeed) robuxNeed.value = "";
+  if(harga) harga.value = "";
+  if(netReceive) netReceive.value = "";
 }
 
 function calcPaytax(){
@@ -214,7 +222,7 @@ function calcGig(){
 }
 
 // =======================
-// TYPE UI
+// TYPE UI (show/hide)
 // =======================
 function applyTypeUI(){
   const gpTypeEl = document.getElementById("gpType");
@@ -232,6 +240,9 @@ function applyTypeUI(){
   const gigItem = document.getElementById("gigItem");
   const gigRobuxPrice = document.getElementById("gigRobuxPrice");
 
+  const gpLinkPaytax = document.getElementById("gpLinkPaytax");
+  const gpLinkNotax = document.getElementById("gpLinkNotax");
+
   paytax?.classList.add("hidden");
   notax?.classList.add("hidden");
   gig?.classList.add("hidden");
@@ -243,20 +254,27 @@ function applyTypeUI(){
   if(gigItem) gigItem.required = false;
   if(gigRobuxPrice) gigRobuxPrice.required = false;
 
-  // reset values
+  if(gpLinkPaytax) gpLinkPaytax.required = false;
+  if(gpLinkNotax) gpLinkNotax.required = false;
+
+  // reset values (biar bersih tiap ganti tipe)
   if(targetNet) targetNet.value = "";
   if(robuxInput) robuxInput.value = "";
   if(gigMap) gigMap.value = "";
   if(gigItem) gigItem.value = "";
   if(gigRobuxPrice) gigRobuxPrice.value = "";
+  if(gpLinkPaytax) gpLinkPaytax.value = "";
+  if(gpLinkNotax) gpLinkNotax.value = "";
   clearCalc();
 
   if(gpType === "paytax"){
     paytax?.classList.remove("hidden");
     if(targetNet) targetNet.required = true;
+    if(gpLinkPaytax) gpLinkPaytax.required = true;
   } else if(gpType === "notax"){
     notax?.classList.remove("hidden");
     if(robuxInput) robuxInput.required = true;
+    if(gpLinkNotax) gpLinkNotax.required = true;
   } else if(gpType === "gig"){
     gig?.classList.remove("hidden");
     if(gigMap) gigMap.required = true;
@@ -266,7 +284,7 @@ function applyTypeUI(){
 }
 
 // =======================
-// PAYMENT MODAL (SAMA)
+// PAYMENT MODAL
 // =======================
 function showPaymentPopup(qrUrl, hargaFormatted) {
   const backdrop = document.getElementById('paymentModalBackdrop');
@@ -460,6 +478,9 @@ document.addEventListener('DOMContentLoaded', function(){
   const robuxInput = document.getElementById("robuxInput");
   const gigRobuxPrice = document.getElementById("gigRobuxPrice");
 
+  const gpLinkPaytax = document.getElementById("gpLinkPaytax");
+  const gpLinkNotax = document.getElementById("gpLinkNotax");
+
   applyTypeUI();
   setRateUI();
 
@@ -496,6 +517,7 @@ document.addEventListener('DOMContentLoaded', function(){
     applyAdminUI(auth.currentUser || null);
     setRateUI();
 
+    // recalc
     if (gpType?.value === "paytax") calcPaytax();
     if (gpType?.value === "notax") calcNotax();
     if (gpType?.value === "gig") calcGig();
@@ -513,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if (user && !isAdmin) {
       signOut(auth).catch(()=>{});
-      showPopup('Notification', 'Akses ditolak', 'Anda bukan admin.');
+      showPopup('Notification', 'Akses ditolak', 'Email ini bukan admin.');
     }
   });
 
@@ -538,14 +560,16 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById("btnWa")?.addEventListener("click", function() {
     if (!storeOpen) {
       showPopup(
-        'Notification',
-        'CLOSE',
-        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali lagi namti.'
+        'STATUS: CLOSE',
+        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali lagi nanti.'
       );
       return;
     }
 
     const form = document.getElementById("orderForm");
+    const type = gpType?.value || '';
+
+    // validate required default fields
     const inputs = form?.querySelectorAll("input[required], select[required]") || [];
     for (const input of inputs) {
       if (!String(input.value || '').trim()) {
@@ -555,8 +579,26 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
+    // extra validation: link gamepass wajib utk paytax/notax
+    let gpLink = "";
+    if(type === "paytax"){
+      gpLink = gpLinkPaytax?.value?.trim() || "";
+      if(!gpLink || !isValidUrl(gpLink)){
+        showPopup('Notification', 'Oops', 'Link gamepass wajib & harus valid (https://...)');
+        gpLinkPaytax?.focus();
+        return;
+      }
+    }
+    if(type === "notax"){
+      gpLink = gpLinkNotax?.value?.trim() || "";
+      if(!gpLink || !isValidUrl(gpLink)){
+        showPopup('Notification', 'Oops', 'Link gamepass wajib & harus valid (https://...)');
+        gpLinkNotax?.focus();
+        return;
+      }
+    }
+
     const displayUser = document.getElementById("displayUser")?.value?.trim() || '';
-    const type = gpType?.value || '';
 
     let detailLine = "";
     const hargaText = document.getElementById("harga")?.value || '';
@@ -573,14 +615,16 @@ document.addEventListener('DOMContentLoaded', function(){
       detailLine =
         "Tipe: Gamepass Paytax\n" +
         "Target bersih: " + target + " R$\n" +
-        "Robux dibutuhkan: " + need + " R$\n";
+        "Robux dibutuhkan: " + need + " R$\n" +
+        "Link gamepass: " + gpLink + "\n";
     } else if(type === "notax"){
       const r = Number(robuxInput?.value || 0);
       const net = Math.floor(r * SELLER_GET);
       detailLine =
         "Tipe: Gamepass No tax\n" +
         "Robux: " + r + " R$\n" +
-        "Perkiraan bersih diterima: " + net + " R$\n";
+        "Perkiraan bersih diterima: " + net + " R$\n" +
+        "Link gamepass: " + gpLink + "\n";
     } else if(type === "gig"){
       const map = document.getElementById("gigMap")?.value?.trim() || '';
       const item = document.getElementById("gigItem")?.value?.trim() || '';
