@@ -560,8 +560,8 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById("btnWa")?.addEventListener("click", function() {
     if (!storeOpen) {
       showPopup(
-        'STATUS: CLOSE',
-        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali lagi nanti.'
+        'SEDANG ISTIRAHAT/CLOSE',
+        'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali dan coba lagi nanti.'
       );
       return;
     }
