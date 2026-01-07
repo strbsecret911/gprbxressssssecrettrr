@@ -38,6 +38,19 @@
         <input id="adminRateInput" type="number" min="1" step="1" placeholder="Contoh: 75" />
         <button id="btnSaveRate" type="button">Simpan Rate</button>
       </div>
+
+      <!-- NEW: STOCK -->
+      <div class="admin-stock">
+        <label>Stock (0 - 99999999)</label>
+        <div class="rate-row">
+          <input id="adminStockInput" type="number" min="0" max="99999999" step="1" placeholder="Contoh: 100" />
+          <button id="btnSaveStock" type="button">Simpan Stock</button>
+        </div>
+        <div class="admin-note">
+          Stock tersimpan di Firestore: <code>settings/store.stock</code>
+        </div>
+      </div>
+
       <div class="admin-note">Rate tersimpan di Firestore: <code>settings/store.rate</code></div>
     </div>
   </div>
@@ -46,6 +59,11 @@
   <div id="storeStatusBar" class="store-status" role="status" aria-live="polite">
     <span id="storeStatusDot" class="dot"></span>
     <span id="storeStatusText">Checking...</span>
+
+    <!-- NEW: stock pill on the right -->
+    <span id="storeStockPill" class="stock-pill" style="display:none;">
+      Stock: <b id="storeStockValue">0</b>
+    </span>
   </div>
 
   <!-- FORM -->
