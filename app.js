@@ -132,8 +132,8 @@ function applyPublicStoreStatusUI(){
   bar.classList.toggle('closed', !storeOpen);
 
   textEl.textContent = storeOpen
-    ? 'STORE OPEN — kamu bisa order sekarang'
-    : 'STORE CLOSED — sedang istirahat';
+    ? 'STATUS: OPEN — Yeay, kamu bisa order sekaranh. Norush ya!'
+    : 'STATUS: CLOSED — Yah.. Stock kosong, silahkan kembali lagi nanti:)';
 
   if(dotEl){
     dotEl.style.background = storeOpen ? '#22c55e' : '#ef4444';
