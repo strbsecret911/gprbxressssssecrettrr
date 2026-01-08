@@ -132,7 +132,7 @@ function applyPublicStoreStatusUI(){
   bar.classList.toggle('closed', !storeOpen);
 
   textEl.textContent = storeOpen
-    ? 'STATUS: OPEN — Yeay, kamu bisa order sekaranh. Norush ya!'
+    ? 'STATUS: OPEN — Yeay, kamu bisa order sekarang. Norush ya!'
     : 'STATUS: CLOSED — Yah.. Stock kosong, silahkan kembali lagi nanti:)';
 
   if(dotEl){
