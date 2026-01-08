@@ -1,14 +1,7 @@
 // app.js (ESM module)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
-  setDoc,
-  serverTimestamp,
-  runTransaction
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 // =======================
@@ -132,8 +125,8 @@ function applyPublicStoreStatusUI(){
   bar.classList.toggle('closed', !storeOpen);
 
   textEl.textContent = storeOpen
-    ? 'STATUS: OPEN — Yeay, kamu bisa order sekarang. Norush ya!'
-    : 'STATUS: CLOSED — Yah.. Stock kosong, silahkan kembali lagi nanti:)';
+    ? 'STORE OPEN — kamu bisa order sekarang'
+    : 'STORE CLOSED — sedang istirahat';
 
   if(dotEl){
     dotEl.style.background = storeOpen ? '#22c55e' : '#ef4444';
@@ -226,27 +219,6 @@ async function setStoreStock(newStock){
   const ref = doc(db, STORE_DOC_PATH[0], STORE_DOC_PATH[1]);
   await setDoc(ref, { stock: s, updatedAt: serverTimestamp() }, { merge: true });
   showPopup('Notification', 'Berhasil', 'Stock berhasil disimpan.');
-}
-
-// ✅ NEW: kurangi stock setelah order sukses (transaction biar aman)
-async function decreaseStockAfterOrder(usedRobux){
-  const used = clampInt(usedRobux, 0, 99999999);
-  if(!used) return;
-
-  const ref = doc(db, STORE_DOC_PATH[0], STORE_DOC_PATH[1]);
-
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists() ? snap.data() : {};
-    const curStock = clampInt(data.stock ?? 0, 0, 99999999);
-
-    const nextStock = Math.max(0, curStock - used);
-
-    tx.set(ref, {
-      stock: nextStock,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  });
 }
 
 // =======================
@@ -573,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   applyTypeUI();
   setRateUI();
-  applyPublicStoreStatusUI();
+  applyPublicStoreStatusUI(); // biar ga stuck "Checking..."
 
   gpType?.addEventListener("change", () => {
     applyTypeUI();
@@ -618,6 +590,7 @@ document.addEventListener('DOMContentLoaded', function(){
     storeOpen = true;
     RATE = 75;
     STOCK = 0;
+
     applyStoreStatusUI();
     applyPublicStoreStatusUI();
     setRateUI();
@@ -656,18 +629,13 @@ document.addEventListener('DOMContentLoaded', function(){
     setStoreStock(v);
   });
 
-  // submit
-  document.getElementById("btnWa")?.addEventListener("click", async function() {
+  // submit (NO stock update here)
+  document.getElementById("btnWa")?.addEventListener("click", function() {
     if (!storeOpen) {
       showPopup(
         'SEDANG ISTIRAHAT/CLOSE',
         'Mohon maaf, saat ini kamu belum bisa melakukan pemesanan. Silahkan kembali dan coba lagi nanti.'
       );
-      return;
-    }
-
-    if (Number(STOCK) <= 0) {
-      showPopup('STOCK HABIS', 'Mohon maaf, stock Robux sedang kosong.', 'Silakan coba lagi nanti ya.');
       return;
     }
 
@@ -714,14 +682,9 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
-    // ✅ tentukan robux yang dipakai untuk kurangi stock
-    let usedRobux = 0;
-
     if(type === "paytax"){
       const target = Number(targetNet?.value || 0);
       const need = Math.ceil(target / SELLER_GET);
-      usedRobux = need;
-
       detailLine =
         "Tipe: Gamepass Paytax\n" +
         "Target bersih: " + target + " R$\n" +
@@ -730,8 +693,6 @@ document.addEventListener('DOMContentLoaded', function(){
     } else if(type === "notax"){
       const r = Number(robuxInput?.value || 0);
       const net = Math.floor(r * SELLER_GET);
-      usedRobux = r;
-
       detailLine =
         "Tipe: Gamepass No tax\n" +
         "Robux: " + r + " R$\n" +
@@ -741,7 +702,6 @@ document.addEventListener('DOMContentLoaded', function(){
       const map = document.getElementById("gigMap")?.value?.trim() || '';
       const item = document.getElementById("gigItem")?.value?.trim() || '';
       const robuxItem = Number(document.getElementById("gigRobuxPrice")?.value || 0);
-      usedRobux = robuxItem;
 
       detailLine =
         "Tipe: GIG\n" +
@@ -754,18 +714,6 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
 
-    usedRobux = clampInt(usedRobux, 0, 99999999);
-
-    // ✅ cek stock cukup
-    if (usedRobux <= 0) {
-      showPopup('Notification', 'Oops', 'Jumlah Robux tidak valid.');
-      return;
-    }
-    if (usedRobux > Number(STOCK)) {
-      showPopup('STOCK TIDAK CUKUP', 'Stock Robux tidak mencukupi untuk pesanan ini.', `Dibutuhkan: ${usedRobux} | Stock: ${STOCK}`);
-      return;
-    }
-
     // TELEGRAM
     const botToken = "8039852277:AAEqbfQUF37cjDlEposj2rzHm28_Pxzv-mw";
     const chatId = "-1003049680083";
@@ -775,38 +723,27 @@ document.addEventListener('DOMContentLoaded', function(){
       "Display + Username: " + displayUser + "\n" +
       detailLine +
       "Rate: Rp" + RATE + " / Robux\n" +
-      "Harga: " + hargaText +
-      "\nStock dipakai: " + usedRobux + " R$";
+      "Harga: " + hargaText;
 
-    try{
-      const res = await fetch("https://api.telegram.org/bot" + botToken + "/sendMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text })
-      });
-
+    fetch("https://api.telegram.org/bot" + botToken + "/sendMessage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text })
+    })
+    .then(res => {
       if (res.ok) {
-        // ✅ kurangi stock setelah order sukses terkirim
-        try{
-          await decreaseStockAfterOrder(usedRobux);
-        } catch(e){
-          console.error("Gagal update stock:", e);
-          // Telegram sudah terkirim -> tetap lanjut, tapi kasih info
-          showPopup('Warning', 'Order terkirim, tapi gagal update stock.', 'Cek koneksi / rules Firestore.');
-        }
-
         const qrUrl = "https://payment.uwu.ai/assets/images/gallery03/8555ed8a_original.jpg?v=58e63277";
         showPaymentPopup(qrUrl, hargaText);
-
         form?.reset();
         applyTypeUI();
         setRateUI();
       } else {
         showPopup('Notification', 'Gagal', 'Gagal mengirim ke Telegram. Coba lagi.');
       }
-    } catch(error){
+    })
+    .catch((error) => {
       console.error(error);
       showPopup('Notification', 'Error', 'Terjadi kesalahan saat mengirim ke Telegram.');
-    }
+    });
   });
 });
